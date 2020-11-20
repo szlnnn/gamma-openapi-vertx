@@ -1,0 +1,66 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Gamma Wrapper API
+  description: 'An API that allows users to use the Gamma framework via http requests'
+  contact:
+    name: Csortán Szilárd
+    email: csortan.szilard@gmail.com
+
+servers:
+  - url: https://dev.gammaframework.hu/v1
+    description: Dev Server
+
+paths:
+  /gamma/addproject:
+    post:
+      operationId: addProject
+      description: Send a file that contains the eclipse project on which the gamma operations will run
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Successfully uploaded the file
+
+  /gamma/codegenerate/{projectName}/{filePath}/{resultPath}:
+    get:
+      operationId: getGeneratedCode
+      description: Obtain the zip result placed in the resultPath of codegenerate gamma operation on the specified file within a specified project
+      parameters:
+        - in: path
+          name: projectName
+          required: true
+          description: The name of the project
+          schema:
+            type: string
+            example: gamma.test.project
+
+        - in: path
+          name: filePath
+          required: true
+          description: The path of the file on which the operation will run
+          schema:
+            type: string
+            example: /model/Crossroad.gcd
+        - in: path
+          name: resultPath
+          required: true
+          description: The path where the artifacts will be generated within the project
+          schema:
+            type: string
+            example: /src-gen
+      responses:
+        200:
+          description: Success
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
