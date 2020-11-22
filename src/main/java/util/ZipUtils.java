@@ -17,16 +17,16 @@ public class ZipUtils {
         fileList = new ArrayList<>();
     }
 
-    public String getOutputZipFilePath(String workspace, String projectName , String resultDir) {
-        String sourceFolder = workspace + "\\" + projectName + "\\" + resultDir;
+    public static String getOutputZipFilePath(String workspace, String projectName , String resultDir) {
+        String sourceFolder = workspace + "\\" + projectName  + resultDir;
         ZipUtils appZip = new ZipUtils();
         appZip.generateFileList(new File(sourceFolder),sourceFolder);
-        String outPutZipFilePath = workspace + "\\" + projectName + "\\" + "src.zip";
+        String outPutZipFilePath = workspace + "\\" + projectName + "\\" + "result.zip";
         appZip.zipIt(outPutZipFilePath,sourceFolder);
         return outPutZipFilePath;
     }
 
-    public void zipIt(String zipFile,String sourceFolder) {
+    private void zipIt(String zipFile,String sourceFolder) {
         byte[] buffer = new byte[1024];
         String source = new File(sourceFolder).getName();
         FileOutputStream fos = null;

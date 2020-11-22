@@ -1,9 +1,8 @@
 package util;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
+import entity.WorkspaceProjectWrapper;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.json.simple.JSONObject;
@@ -11,40 +10,48 @@ import org.json.simple.JSONObject;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 public class ProcessBuilderUtil {
 
-    private static final String DIRECTORY_OF_WORKSPACES = "E:\\Egyetem\\GammaWrapper\\Workspaces\\";
-    private static final String DIRECTORY_OF_GENERATOR_HEADLESS_ECLIPSE = "E:\\Egyetem\\GammaWrapper\\HeadlessEclipse\\generator\\eclipse.exe";
-    private static final String DIRECTORY_OF_GAMMA_HEADLESS_ECLIPSE = "E:\\Egyetem\\GammaWrapper\\HeadlessEclipse\\gammaapi\\eclipse.exe";
-    private static final String CONSTANT_ARGUMENTS = " -consoleLog -data ";
+    private static final String DIRECTORY_OF_WORKSPACES = "E:/Egyetem/GammaWrapper/Workspaces/";
+    private static final String DIRECTORY_OF_GENERATOR_HEADLESS_ECLIPSE = "E:/Egyetem/GammaWrapper/HeadlessEclipse/generator/eclipse.exe";
+    private static final String DIRECTORY_OF_GAMMA_HEADLESS_ECLIPSE = "E:/Egyetem/GammaWrapper/HeadlessEclipse/gammaapi/eclipse";
+    private static final String CONSTANT_ARGUMENTS = "-consoleLog -data ";
     public static final String PROJECT_DESCRIPTOR_JSON = "projectDescriptor.json";
+    private static final String ROOT_WRAPPER_JSON = "wrapperList.json";
     public static final String UNDER_OPERATION_PROPERTY = "underOperation";
 
 
-    public static void generateCode(String projectName, String workspace, String filePath) throws IOException {
-        String commandToExecute = DIRECTORY_OF_GAMMA_HEADLESS_ECLIPSE + CONSTANT_ARGUMENTS + DIRECTORY_OF_WORKSPACES + workspace + " " + filePath
-                + " " + DIRECTORY_OF_WORKSPACES + workspace + "\\" + projectName + "\\" + PROJECT_DESCRIPTOR_JSON;
+    public static void runGammaOperations(String projectName, String workspace, String filePath) throws IOException {
         updateUnderOperationStatus(projectName, workspace, true);
-        Runtime rt = Runtime.getRuntime();
-        rt.exec(commandToExecute);
+        ProcessBuilder pb = new ProcessBuilder(DIRECTORY_OF_GAMMA_HEADLESS_ECLIPSE, "-consoleLog", "-data", DIRECTORY_OF_WORKSPACES + workspace,
+                getFullFilePath(filePath, workspace, projectName), DIRECTORY_OF_WORKSPACES + workspace + "/" + projectName + "/" + PROJECT_DESCRIPTOR_JSON);
+        pb.redirectErrorStream(true);
+        pb.inheritIO();
+        pb.start();
+    }
 
+    private static String getFullFilePath(String filePath, String workspace, String projectName) {
+        return DIRECTORY_OF_WORKSPACES + workspace + "/" + projectName + "/" + filePath;
     }
 
     private static void updateUnderOperationStatus(String projectName, String workspace, Boolean status) throws IOException {
-        File jsonFile = new File(DIRECTORY_OF_WORKSPACES + workspace + "\\" + projectName + "\\" + PROJECT_DESCRIPTOR_JSON);
+        File jsonFile = new File(DIRECTORY_OF_WORKSPACES + workspace + "/" + projectName + "/" + PROJECT_DESCRIPTOR_JSON);
         String jsonString = FileUtils.readFileToString(jsonFile);
         JsonElement jElement = new JsonParser().parse(jsonString);
         JsonObject jObject = jElement.getAsJsonObject();
         jObject.remove(UNDER_OPERATION_PROPERTY);
         jObject.addProperty(UNDER_OPERATION_PROPERTY, status);
-
         Gson gson = new Gson();
         String resultingJson = gson.toJson(jElement);
         FileUtils.writeStringToFile(jsonFile, resultingJson);
-
     }
 
     private static void createProjectJSONFile(String workspace, String projectName, String ownerContact) {
@@ -60,7 +67,7 @@ public class ProcessBuilderUtil {
         jsonObject.put(UNDER_OPERATION_PROPERTY, false);
 
         try {
-            FileWriter file = new FileWriter(DIRECTORY_OF_WORKSPACES + workspace + "\\" + projectName + "\\" + PROJECT_DESCRIPTOR_JSON);
+            FileWriter file = new FileWriter(DIRECTORY_OF_WORKSPACES + workspace + "/" + projectName + "/" + PROJECT_DESCRIPTOR_JSON);
             file.write(jsonObject.toJSONString());
             file.close();
         } catch (IOException e) {
@@ -73,6 +80,7 @@ public class ProcessBuilderUtil {
         Runtime rt = Runtime.getRuntime();
         Process pr = rt.exec(commandToExecute);
         pr.waitFor();
+        addWorkspaceProjectWrapperToRootJson(projectName, workspace);
         createProjectJSONFile(workspace, projectName, ownerContact);
     }
 
@@ -82,6 +90,35 @@ public class ProcessBuilderUtil {
         Runtime rt = Runtime.getRuntime();
         Process pr = rt.exec(commandToExecute);
         pr.waitFor();
+        addWorkspaceProjectWrapperToRootJson(null, workspace);
         return workspace;
+    }
+
+    private static void addWorkspaceProjectWrapperToRootJson(String projectName, String workspace) throws IOException {
+        List<WorkspaceProjectWrapper> yourList = getWrapperListFromJson();
+        if (yourList == null) {
+            yourList = new ArrayList<>();
+        }
+        yourList.add(new WorkspaceProjectWrapper(workspace, projectName));
+        try {
+            FileWriter writer = new FileWriter(DIRECTORY_OF_WORKSPACES + ROOT_WRAPPER_JSON);
+            new Gson().toJson(yourList, writer);
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static List<WorkspaceProjectWrapper> getWrapperListFromJson() throws IOException {
+        File jsonFile = new File(DIRECTORY_OF_WORKSPACES + ROOT_WRAPPER_JSON);
+        if (!jsonFile.exists()) {
+            Files.createFile(Paths.get(jsonFile.getPath()));
+        }
+        String jsonString = FileUtils.readFileToString(jsonFile);
+        JsonElement jElement = new JsonParser().parse(jsonString);
+        Type listType = new TypeToken<List<WorkspaceProjectWrapper>>() {
+        }.getType();
+
+        return new Gson().fromJson(jElement, listType);
     }
 }

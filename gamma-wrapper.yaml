@@ -27,8 +27,8 @@ paths:
                   idOfWorkspace:
                     type: string
                     format: uuid
-        401:
-          description: Did not provide a valid workspace
+        500:
+          description: The workspace generation failed
 
   /gamma/addproject/{workspace}:
     post:
