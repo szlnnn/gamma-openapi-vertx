@@ -96,6 +96,41 @@ paths:
         503:
           description: This project is already under operation
 
+  /gamma/stopprocess/{workspace}/{projectName}/{pid}:
+    post:
+      operationId: stopOperation
+      description: Stop a gamma operation based on the provided pid
+      parameters:
+        - in: path
+          name: projectName
+          required: true
+          description: The name of the projec
+          schema:
+            type: string
+            example: gamma.test.project
+        - in: path
+          name: pid
+          required: true
+          description: The pid of the process
+          schema:
+            type: integer
+            example: 13214
+        - in: path
+          name: workspace
+          required: true
+          description: The workspace which contains the project
+          schema:
+            type: string
+            format: uuid
+            example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+      responses:
+        200:
+          description: The operation has stopped
+        401:
+          description: Did not provide a valid workspace or project name
+        503:
+          description: This project is not under operation
+
   /gamma/getresult/{workspace}/{projectName}:
     put:
       operationId: getResult

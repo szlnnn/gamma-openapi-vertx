@@ -23,19 +23,25 @@ public class ProcessBuilderUtil {
     private static final String DIRECTORY_OF_WORKSPACES = "E:/Egyetem/GammaWrapper/Workspaces/";
     private static final String DIRECTORY_OF_GENERATOR_HEADLESS_ECLIPSE = "E:/Egyetem/GammaWrapper/HeadlessEclipse/generator/eclipse.exe";
     private static final String DIRECTORY_OF_GAMMA_HEADLESS_ECLIPSE = "E:/Egyetem/GammaWrapper/HeadlessEclipse/gammaapi/eclipse";
-    private static final String CONSTANT_ARGUMENTS = "-consoleLog -data ";
+    private static final String CONSTANT_ARGUMENTS = " -consoleLog -data ";
     public static final String PROJECT_DESCRIPTOR_JSON = "projectDescriptor.json";
     private static final String ROOT_WRAPPER_JSON = "wrapperList.json";
     public static final String UNDER_OPERATION_PROPERTY = "underOperation";
 
 
-    public static void runGammaOperations(String projectName, String workspace, String filePath) throws IOException {
+    public static long runGammaOperations(String projectName, String workspace, String filePath) throws IOException {
         updateUnderOperationStatus(projectName, workspace, true);
         ProcessBuilder pb = new ProcessBuilder(DIRECTORY_OF_GAMMA_HEADLESS_ECLIPSE, "-consoleLog", "-data", DIRECTORY_OF_WORKSPACES + workspace,
                 getFullFilePath(filePath, workspace, projectName), DIRECTORY_OF_WORKSPACES + workspace + "/" + projectName + "/" + PROJECT_DESCRIPTOR_JSON);
         pb.redirectErrorStream(true);
         pb.inheritIO();
-        pb.start();
+       return pb.start().pid();
+    }
+
+    public static void stopOperation(String projectName, String workspace,int pid) throws IOException {
+        String cmd = "taskkill /F /T /PID " + pid;
+        Runtime.getRuntime().exec(cmd);
+        updateUnderOperationStatus(projectName,workspace, false);
     }
 
     private static String getFullFilePath(String filePath, String workspace, String projectName) {

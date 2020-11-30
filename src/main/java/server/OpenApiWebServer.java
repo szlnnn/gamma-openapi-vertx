@@ -47,11 +47,12 @@ public class OpenApiWebServer extends AbstractVerticle {
                     String workspace = params.pathParameter(WORKSPACE).getString();
                     String filePath = params.pathParameter("filePath").getString();
                     boolean success = false;
+                    long pid = 0;
                     try {
                         errorHandlerPOJO = getErrorObject(workspace,projectName);
                        if (errorHandlerPOJO.getErrorObject() == null){
                            success = true;
-                            ProcessBuilderUtil.runGammaOperations(projectName, workspace, filePath.replace("_", "\\"));
+                           pid = ProcessBuilderUtil.runGammaOperations(projectName, workspace, filePath.replace("_", "\\"));
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -61,7 +62,7 @@ public class OpenApiWebServer extends AbstractVerticle {
                                 .response()
                                 .setStatusCode(200)
                                 .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-                                .end();
+                                .end("This is your process id:" + pid);
                     } else {
                         sendErrorResponse(routingContext, errorHandlerPOJO);
                     }
@@ -150,6 +151,33 @@ public class OpenApiWebServer extends AbstractVerticle {
                     }
                 });
 
+                routerFactory.addHandlerByOperationId("stopOperation", routingContext -> {
+                    ErrorHandlerPOJO errorHandlerPOJO = null;
+                    RequestParameters params = routingContext.get(PARSED_PARAMETERS);
+                    String workspace = params.pathParameter(WORKSPACE).getString();
+                    String projectName = params.pathParameter("projectName").getString();
+                    int pid = params.pathParameter("pid").getInteger();
+                    boolean success = false;
+                    try {
+                        errorHandlerPOJO = getErrorObject(workspace,projectName);
+                        if (Validator.isValidPid(pid) && errorHandlerPOJO.getStatusCode() == 503 ){
+                            ProcessBuilderUtil.stopOperation(projectName,workspace,pid);
+                            success = true;
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    if (success) {
+                        routingContext
+                                .response()
+                                .setStatusCode(200)
+                                .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+                                .end();
+                    } else {
+                        sendErrorResponse(routingContext, errorHandlerPOJO);
+                    }
+                });
+
 
                 Router router = routerFactory.getRouter();
 
@@ -175,8 +203,6 @@ public class OpenApiWebServer extends AbstractVerticle {
             } else {
                 future.fail(ar.cause());
             }
-
-
         });
     }
 
