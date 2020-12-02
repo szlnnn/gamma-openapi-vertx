@@ -88,6 +88,7 @@ public class ProcessBuilderUtil {
         pr.waitFor();
         addWorkspaceProjectWrapperToRootJson(projectName, workspace);
         createProjectJSONFile(workspace, projectName, ownerContact);
+        deleteSourceZip(workspace,projectName);
     }
 
     public static String createWorkspaceForUser() throws IOException, InterruptedException {
@@ -126,5 +127,16 @@ public class ProcessBuilderUtil {
         }.getType();
 
         return new Gson().fromJson(jElement, listType);
+    }
+
+    private static void deleteSourceZip(String workspace,String projectName) {
+        File sourceZip = new File(DIRECTORY_OF_WORKSPACES + workspace + "/" + projectName+ ".zip");
+        if (sourceZip.exists()) {
+            try {
+                Files.delete(Paths.get(sourceZip.getPath()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

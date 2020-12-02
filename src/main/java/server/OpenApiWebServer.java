@@ -29,6 +29,7 @@ public class OpenApiWebServer extends AbstractVerticle {
     public static final String MESSAGE = "message";
     public static final String WORKSPACE = "workspace";
     public static final String PARSED_PARAMETERS = "parsedParameters";
+    public static final String PROJECT_NAME = "projectName";
     HttpServer server;
     private static final String DIRECTORY_OF_WORKSPACES = "E:\\Egyetem\\GammaWrapper\\Workspaces\\";
 
@@ -43,7 +44,7 @@ public class OpenApiWebServer extends AbstractVerticle {
                 routerFactory.addHandlerByOperationId("runOperation", routingContext -> {
                     ErrorHandlerPOJO errorHandlerPOJO = null;
                     RequestParameters params = routingContext.get(PARSED_PARAMETERS);
-                    String projectName = params.pathParameter("projectName").getString();
+                    String projectName = params.pathParameter(PROJECT_NAME).getString();
                     String workspace = params.pathParameter(WORKSPACE).getString();
                     String filePath = params.pathParameter("filePath").getString();
                     boolean success = false;
@@ -73,7 +74,7 @@ public class OpenApiWebServer extends AbstractVerticle {
                     ErrorHandlerPOJO errorHandlerPOJO = null;
                     String zipPath = null;
                     RequestParameters params = routingContext.get(PARSED_PARAMETERS);
-                    String projectName = params.pathParameter("projectName").getString();
+                    String projectName = params.pathParameter(PROJECT_NAME).getString();
                     String workspace = params.pathParameter(WORKSPACE).getString();
                     JsonObject json = routingContext.getBodyAsJson();
                     JsonArray jsonArray = json.getJsonArray("resultDirs");
@@ -155,7 +156,7 @@ public class OpenApiWebServer extends AbstractVerticle {
                     ErrorHandlerPOJO errorHandlerPOJO = null;
                     RequestParameters params = routingContext.get(PARSED_PARAMETERS);
                     String workspace = params.pathParameter(WORKSPACE).getString();
-                    String projectName = params.pathParameter("projectName").getString();
+                    String projectName = params.pathParameter(PROJECT_NAME).getString();
                     int pid = params.pathParameter("pid").getInteger();
                     boolean success = false;
                     try {
@@ -163,6 +164,33 @@ public class OpenApiWebServer extends AbstractVerticle {
                         if (Validator.isValidPid(pid) && errorHandlerPOJO.getStatusCode() == 503 ){
                             ProcessBuilderUtil.stopOperation(projectName,workspace,pid);
                             success = true;
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    if (success) {
+                        routingContext
+                                .response()
+                                .setStatusCode(200)
+                                .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
+                                .end();
+                    } else {
+                        sendErrorResponse(routingContext, errorHandlerPOJO);
+                    }
+                });
+
+                routerFactory.addHandlerByOperationId("deleteProject", routingContext -> {
+                    ErrorHandlerPOJO errorHandlerPOJO = null;
+                    RequestParameters params = routingContext.get(PARSED_PARAMETERS);
+                    String projectName = params.pathParameter(PROJECT_NAME).getString();
+                    String workspace = params.pathParameter(WORKSPACE).getString();
+
+                    boolean success = false;
+                    try {
+                        errorHandlerPOJO = getErrorObject(workspace,projectName);
+                        if (errorHandlerPOJO.getErrorObject() == null){
+                            success = true;
+                            Provider.deleteProject(workspace,projectName);
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -212,13 +240,13 @@ public class OpenApiWebServer extends AbstractVerticle {
         if (!Validator.checkIfProjectAlreadyExistsUnderWorkspace(workspace, projectName)) {
             errorObject = new JsonObject()
                     .put("code", 401)
-                    .put(MESSAGE, "Project" + projectName + " does not exists under this workspace!");
+                    .put(MESSAGE, "Project " + projectName + " does not exists under this workspace!");
             errorHandlerPOJO.setStatusCode(401);
             errorHandlerPOJO.setErrorObject(errorObject);
         } else if (Validator.checkIfProjectIsUnderLoad(workspace, projectName)) {
             errorObject = new JsonObject()
                     .put("code", 503)
-                    .put(MESSAGE, "This project is already under operation!");
+                    .put(MESSAGE, "There is an in progress operation on this project, try again later!");
             errorHandlerPOJO.setStatusCode(503);
             errorHandlerPOJO.setErrorObject(errorObject);
         }
@@ -239,9 +267,8 @@ public class OpenApiWebServer extends AbstractVerticle {
 
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
+        vertx.setPeriodic(3000, aLong -> System.out.println("Timer 1 fired: " + aLong));
         vertx.deployVerticle(new OpenApiWebServer());
-
-
     }
 
 
