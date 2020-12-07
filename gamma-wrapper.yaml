@@ -62,7 +62,7 @@ paths:
           description: Project already exists under this workspace, delete it and resend this request
 
   /gamma/api/{workspace}/{projectName}/{filePath}:
-    post:
+    put:
       operationId: runOperation
       description: Start a gamma operation based on the ggen file
       parameters:
@@ -96,10 +96,10 @@ paths:
         503:
           description: This project is already under operation
 
-  /gamma/stopprocess/{workspace}/{projectName}/{pid}:
-    post:
+  /gamma/stopprocess/{workspace}/{projectName}:
+    put:
       operationId: stopOperation
-      description: Stop a gamma operation based on the provided pid
+      description: Stop a gamma operation based on the given workspace-projectName pair
       parameters:
         - in: path
           name: projectName
@@ -108,13 +108,6 @@ paths:
           schema:
             type: string
             example: gamma.test.project
-        - in: path
-          name: pid
-          required: true
-          description: The pid of the process
-          schema:
-            type: integer
-            example: 13214
         - in: path
           name: workspace
           required: true

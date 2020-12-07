@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import entity.WorkspaceProjectWrapper;
 import io.vertx.core.json.JsonArray;
 import org.apache.commons.io.FileUtils;
-import util.ProcessBuilderUtil;
+import util.FileHandlerUtil;
 import util.ZipUtils;
 
 import java.io.File;
@@ -19,7 +19,9 @@ import java.util.stream.Collectors;
 public class Provider {
 
     private static final String RESULT_DIR_NAME = "result";
-    private static final String DIRECTORY_OF_WORKSPACES = "E:/Egyetem/GammaWrapper/Workspaces/";
+   // private static final String DIRECTORY_OF_WORKSPACES = "E:/Egyetem/GammaWrapper/Workspaces/";
+   private static final String DIRECTORY_OF_WORKSPACES_PROPERTY_NAME = "root.of.workspaces.path";
+
     private static final String ROOT_WRAPPER_JSON = "wrapperList.json";
 
     private Provider() {
@@ -110,13 +112,13 @@ public class Provider {
     }
 
     public static void deleteProject(String workspace, String projectName) {
-        File result = new File(DIRECTORY_OF_WORKSPACES + workspace + "/" + projectName);
+        File result = new File(FileHandlerUtil.getProperty(DIRECTORY_OF_WORKSPACES_PROPERTY_NAME) + workspace + "/" + projectName);
         List<WorkspaceProjectWrapper> workspaceProjectWrappers = new ArrayList<>();
         if (result.exists()) {
             try {
                 deleteDirectory(result);
                 deleteProvisionalFilesFromWorkspace(workspace,projectName);
-                workspaceProjectWrappers = ProcessBuilderUtil.getWrapperListFromJson();
+                workspaceProjectWrappers = FileHandlerUtil.getWrapperListFromJson();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -124,7 +126,7 @@ public class Provider {
         if (workspaceProjectWrappers != null && !workspaceProjectWrappers.isEmpty()) {
             List<WorkspaceProjectWrapper> yourList = workspaceProjectWrappers.stream().filter(wrapper -> !projectName.equals(wrapper.getProjectName())).collect(Collectors.toList());
             try {
-                FileWriter writer = new FileWriter(DIRECTORY_OF_WORKSPACES + ROOT_WRAPPER_JSON);
+                FileWriter writer = new FileWriter(FileHandlerUtil.getProperty(DIRECTORY_OF_WORKSPACES_PROPERTY_NAME) + ROOT_WRAPPER_JSON);
                 new Gson().toJson(yourList, writer);
                 writer.close();
             } catch (IOException e) {
@@ -135,12 +137,13 @@ public class Provider {
 
     private static void deleteProvisionalFilesFromWorkspace(String workspace, String projectName) throws IOException {
         String projectMetadata = "\\.metadata\\.plugins\\org.eclipse.core.resources\\.projects\\";
-        File metadataDirectory = new File(DIRECTORY_OF_WORKSPACES+workspace+projectMetadata+projectName);
+        File metadataDirectory = new File(FileHandlerUtil.getProperty(DIRECTORY_OF_WORKSPACES_PROPERTY_NAME)
+                + workspace+projectMetadata+projectName);
         if (metadataDirectory.exists()) {
             deleteDirectory(metadataDirectory);
         }
         String snapPath = "\\.metadata\\.plugins\\org.eclipse.core.resources\\0.snap";
-        File snapFile = new File(DIRECTORY_OF_WORKSPACES+workspace+snapPath);
+        File snapFile = new File(FileHandlerUtil.getProperty(DIRECTORY_OF_WORKSPACES_PROPERTY_NAME) + workspace+snapPath);
         if (snapFile.exists()) {
             Files.delete(Paths.get(snapFile.getPath()));
         }

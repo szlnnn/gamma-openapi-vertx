@@ -17,7 +17,8 @@ import io.vertx.ext.web.api.contract.openapi3.OpenAPI3RouterFactory;
 import joptsimple.internal.Strings;
 import service.Provider;
 import service.Validator;
-import util.ProcessBuilderUtil;
+import service.ProcessBuilderCLI;
+import util.FileHandlerUtil;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,7 +32,7 @@ public class OpenApiWebServer extends AbstractVerticle {
     public static final String PARSED_PARAMETERS = "parsedParameters";
     public static final String PROJECT_NAME = "projectName";
     HttpServer server;
-    private static final String DIRECTORY_OF_WORKSPACES = "E:\\Egyetem\\GammaWrapper\\Workspaces\\";
+    private static final String DIRECTORY_OF_WORKSPACES_PROPERTY_NAME = "root.of.workspaces.path";
 
     @Override
     public void start(Future<Void> future) {
@@ -48,12 +49,11 @@ public class OpenApiWebServer extends AbstractVerticle {
                     String workspace = params.pathParameter(WORKSPACE).getString();
                     String filePath = params.pathParameter("filePath").getString();
                     boolean success = false;
-                    long pid = 0;
                     try {
                         errorHandlerPOJO = getErrorObject(workspace,projectName);
                        if (errorHandlerPOJO.getErrorObject() == null){
                            success = true;
-                           pid = ProcessBuilderUtil.runGammaOperations(projectName, workspace, filePath.replace("_", "\\"));
+                           ProcessBuilderCLI.runGammaOperations(projectName, workspace, filePath.replace("_", "\\"));
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -63,7 +63,7 @@ public class OpenApiWebServer extends AbstractVerticle {
                                 .response()
                                 .setStatusCode(200)
                                 .putHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-                                .end("This is your process id:" + pid);
+                                .end();
                     } else {
                         sendErrorResponse(routingContext, errorHandlerPOJO);
                     }
@@ -84,7 +84,8 @@ public class OpenApiWebServer extends AbstractVerticle {
                         errorHandlerPOJO = getErrorObject(workspace,projectName);
                         if (errorHandlerPOJO.getErrorObject() == null){
                             success = true;
-                            zipPath = Provider.getResultZipFilePath(jsonArray,DIRECTORY_OF_WORKSPACES.concat(workspace),projectName);
+                            zipPath = Provider.getResultZipFilePath(jsonArray,
+                                    FileHandlerUtil.getProperty(DIRECTORY_OF_WORKSPACES_PROPERTY_NAME).concat(workspace),projectName);
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -110,9 +111,10 @@ public class OpenApiWebServer extends AbstractVerticle {
                             if (!Validator.checkIfWorkspaceExists(workspace) || f.size() == 0 || Validator.checkIfProjectAlreadyExistsUnderWorkspace(workspace, f.fileName().substring(0, f.fileName().lastIndexOf(".")))) {
                                 success = false;
                             } else {
-                                Files.move(Paths.get(f.uploadedFileName()), Paths.get(DIRECTORY_OF_WORKSPACES + workspace + "\\" + f.fileName()));
+                                Files.move(Paths.get(f.uploadedFileName()), Paths.get( FileHandlerUtil.getProperty(DIRECTORY_OF_WORKSPACES_PROPERTY_NAME)
+                                        + workspace + "\\" + f.fileName()));
                                 String projectName = f.fileName().substring(0, f.fileName().lastIndexOf("."));
-                                ProcessBuilderUtil.createEclipseProject(projectName, workspace, ownerContact);
+                                ProcessBuilderCLI.createEclipseProject(projectName, workspace, ownerContact);
                             }
                         } catch (IOException | InterruptedException e) {
                             e.printStackTrace();
@@ -134,7 +136,7 @@ public class OpenApiWebServer extends AbstractVerticle {
                 routerFactory.addHandlerByOperationId("addWorkspace", routingContext -> {
                     String workspaceUUID = "";
                     try {
-                        workspaceUUID = ProcessBuilderUtil.createWorkspaceForUser();
+                        workspaceUUID = ProcessBuilderCLI.createWorkspaceForUser();
                     } catch (IOException | InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -157,12 +159,11 @@ public class OpenApiWebServer extends AbstractVerticle {
                     RequestParameters params = routingContext.get(PARSED_PARAMETERS);
                     String workspace = params.pathParameter(WORKSPACE).getString();
                     String projectName = params.pathParameter(PROJECT_NAME).getString();
-                    int pid = params.pathParameter("pid").getInteger();
                     boolean success = false;
                     try {
                         errorHandlerPOJO = getErrorObject(workspace,projectName);
-                        if (Validator.isValidPid(pid) && errorHandlerPOJO.getStatusCode() == 503 ){
-                            ProcessBuilderUtil.stopOperation(projectName,workspace,pid);
+                        if (errorHandlerPOJO.getStatusCode() == 503 ){
+                            ProcessBuilderCLI.stopOperation(projectName,workspace);
                             success = true;
                         }
                     } catch (IOException e) {

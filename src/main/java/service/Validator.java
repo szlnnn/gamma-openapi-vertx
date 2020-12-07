@@ -1,12 +1,11 @@
 package service;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import entity.WorkspaceProjectWrapper;
 import org.apache.commons.io.FileUtils;
-import util.ProcessBuilderUtil;
+import util.FileHandlerUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,12 +14,13 @@ import java.util.Optional;
 
 public class Validator {
 
-    private static final String DIRECTORY_OF_WORKSPACES = "E:\\Egyetem\\GammaWrapper\\Workspaces\\";
+   private static final String DIRECTORY_OF_WORKSPACES_PROPERTY_NAME = "root.of.workspaces.path";
+
     public static final String PROJECT_DESCRIPTOR_JSON = "projectDescriptor.json";
     public static final String UNDER_OPERATION_PROPERTY = "underOperation";
 
     public static boolean checkIfWorkspaceExists(String workspace) throws IOException {
-        List<WorkspaceProjectWrapper> wrapperList = ProcessBuilderUtil.getWrapperListFromJson();
+        List<WorkspaceProjectWrapper> wrapperList = FileHandlerUtil.getWrapperListFromJson();
         if (wrapperList == null) {
             return false;
         }
@@ -28,7 +28,7 @@ public class Validator {
     }
 
     public static boolean checkIfProjectAlreadyExistsUnderWorkspace(String workspace, String projectName) throws IOException {
-        List<WorkspaceProjectWrapper> wrapperList = ProcessBuilderUtil.getWrapperListFromJson();
+        List<WorkspaceProjectWrapper> wrapperList = FileHandlerUtil.getWrapperListFromJson();
         if (wrapperList == null) {
             return false;
         }
@@ -36,7 +36,7 @@ public class Validator {
     }
 
     public static boolean checkIfProjectIsUnderLoad(String workspace, String projectName) throws IOException {
-        File jsonFile = new File(DIRECTORY_OF_WORKSPACES + workspace + "\\" + projectName + "\\" + PROJECT_DESCRIPTOR_JSON);
+        File jsonFile = new File(FileHandlerUtil.getProperty(DIRECTORY_OF_WORKSPACES_PROPERTY_NAME) + workspace + "\\" + projectName + "\\" + PROJECT_DESCRIPTOR_JSON);
         String jsonString = FileUtils.readFileToString(jsonFile);
         JsonElement jElement = new JsonParser().parse(jsonString);
         JsonObject jObject = jElement.getAsJsonObject();
